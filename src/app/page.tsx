@@ -1,101 +1,115 @@
+"use client";
+import { useCallback, useMemo } from "react";
+import { useDropzone, DropzoneOptions } from "react-dropzone";
 import Image from "next/image";
+import { useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [isUploading, setIsUploading] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const uploadFiles = async (files: File[]) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+
+      // 將所有檔案加入 FormData
+      files.forEach((file) => {
+        // 保留檔案的相對路徑
+        const relativePath = file.webkitRelativePath || file.name;
+        formData.append('files', file, relativePath);
+      });
+
+      const response = await fetch('/api/tag', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      console.log('上傳成功:', data);
+
+    } catch (error) {
+      console.error('上傳錯誤:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    uploadFiles(acceptedFiles);
+  }, []);
+
+  const dropzoneOptions = useMemo(() => ({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif']
+    },
+    // @ts-ignore
+    directory: true,
+    // @ts-ignore
+    webkitdirectory: true,
+    multiple: true
+  } as DropzoneOptions), [onDrop]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-8">
+      <div className="max-w-3xl mx-auto">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800 dark:text-white">
+          資料夾圖片上傳
+        </h1>
+
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+          <div
+            {...getRootProps()}
+            className={`
+              relative p-12 border-2 border-dashed rounded-lg text-center
+              transition-all duration-300 ease-in-out
+              ${isDragActive
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500'
+              }
+            `}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <input {...getInputProps()} />
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <svg
+                  className={`w-16 h-16 ${isDragActive ? 'text-blue-500' : 'text-gray-400'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+              </div>
+              <div className="text-lg font-medium text-gray-700 dark:text-gray-200">
+                {isDragActive ? (
+                  <p>Release to upload...</p>
+                ) : (
+                  <p>Drag and drop image folder here</p>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                or click to select folder
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            Supported formats: JPG, PNG, GIF
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
